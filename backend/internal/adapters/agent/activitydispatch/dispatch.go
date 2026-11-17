@@ -77,6 +77,7 @@ var Derivers = map[string]DeriveFunc{
 	"cursor":           cursor.DeriveActivityState,
 	"qwen":             activitystate.StandardDeriveActivityState,
 	"gemini":           gemini.DeriveActivityState,
+	"gigacode":         activitystate.StandardDeriveActivityState,
 	"copilot":          activitystate.StandardDeriveActivityState,
 	"kimi":             activitystate.StandardDeriveActivityState,
 	"cline":            cline.DeriveActivityState,

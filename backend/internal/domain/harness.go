@@ -18,6 +18,7 @@ const (
 	HarnessCursor          AgentHarness = "cursor"
 	HarnessQwen            AgentHarness = "qwen"
 	HarnessGemini          AgentHarness = "gemini"
+	HarnessGigaCode        AgentHarness = "gigacode"
 	HarnessCopilot         AgentHarness = "copilot"
 	HarnessGoose           AgentHarness = "goose"
 	HarnessAuggie          AgentHarness = "auggie"
@@ -57,7 +58,7 @@ const (
 // validate user-supplied harness names (e.g. per-project role overrides).
 var AllHarnesses = []AgentHarness{
 	HarnessClaudeCode, HarnessCodex, HarnessAider, HarnessOpenCode, HarnessOpenCodeV2, HarnessGrok,
-	HarnessDroid, HarnessAmp, HarnessAgy, HarnessCrush, HarnessCursor, HarnessQwen, HarnessGemini,
+	HarnessDroid, HarnessAmp, HarnessAgy, HarnessCrush, HarnessCursor, HarnessQwen, HarnessGemini, HarnessGigaCode,
 	HarnessCopilot, HarnessGoose, HarnessAuggie, HarnessContinue, HarnessDevin,
 	HarnessCline, HarnessKimi, HarnessMuse, HarnessKiro, HarnessKilocode, HarnessVibe, HarnessPi,
 	HarnessKimchi, HarnessPrimeAgent, HarnessAutohand,

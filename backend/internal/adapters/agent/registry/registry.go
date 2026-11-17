@@ -27,6 +27,7 @@ import (
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/droid"
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/fx"
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/gemini"
+	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/gigacode"
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/goose"
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/grok"
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/hermes"
@@ -68,6 +69,7 @@ func Constructors() []adapters.Adapter {
 		cursor.New(),
 		qwen.New(),
 		gemini.New(),
+		gigacode.New(),
 		copilot.New(),
 		kimi.New(),
 		muse.New(),

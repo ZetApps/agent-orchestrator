@@ -25608,6 +25608,7 @@ components:
           - cursor
           - qwen
           - gemini
+          - gigacode
           - copilot
           - goose
           - auggie
