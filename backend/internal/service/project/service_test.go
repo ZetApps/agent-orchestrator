@@ -1838,7 +1838,7 @@ func TestManager_AddWorkspaceAcceptsUnbornChildAsNeedsInit(t *testing.T) {
 	}
 }
 
-func TestManager_AddWorkspaceAcceptsChildWithoutOriginAsNeedsInit(t *testing.T) {
+func TestManager_AddWorkspaceAcceptsLocalOnlyChildAsReady(t *testing.T) {
 	configureCommitter(t)
 	ctx := context.Background()
 	m := newManager(t)
@@ -1853,19 +1853,22 @@ func TestManager_AddWorkspaceAcceptsChildWithoutOriginAsNeedsInit(t *testing.T) 
 	if len(proj.WorkspaceRepos) != 2 {
 		t.Fatalf("expected 2 child repos, got %d", len(proj.WorkspaceRepos))
 	}
-	var needsInitRepo *project.WorkspaceRepo
+	var localRepo *project.WorkspaceRepo
 	for i := range proj.WorkspaceRepos {
-		if proj.WorkspaceRepos[i].GitStatus == string(domain.GitStatusNeedsInit) {
-			needsInitRepo = &proj.WorkspaceRepos[i]
+		if proj.WorkspaceRepos[i].Name == "api" {
+			localRepo = &proj.WorkspaceRepos[i]
 			break
 		}
 	}
-	if needsInitRepo == nil {
-		t.Fatalf("expected a needs_init child")
+	if localRepo == nil {
+		t.Fatalf("expected the local-only child")
 		return
 	}
-	if needsInitRepo.Repo != "" {
-		t.Fatalf("Repo = %q, want empty", needsInitRepo.Repo)
+	if localRepo.GitStatus != string(domain.GitStatusReady) {
+		t.Fatalf("GitStatus = %q, want ready", localRepo.GitStatus)
+	}
+	if localRepo.Repo != "" {
+		t.Fatalf("Repo = %q, want empty", localRepo.Repo)
 	}
 }
 

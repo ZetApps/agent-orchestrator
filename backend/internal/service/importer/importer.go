@@ -218,7 +218,6 @@ func (m *Manager) Validate(ctx context.Context, in ImportValidationInput) (Impor
 
 	root := inspectImportRepo(ctx, path)
 	if importKind == ImportKindProject {
-		root.RequiredActions = addProjectRemoteRepositoryAction(root.RequiredActions)
 		if root.HasOrigin && root.HasCommit && importGitHubPreparationIncomplete(ctx, path) && !slices.Contains(root.RequiredActions, GitPreparationActionCreateRemoteRepository) {
 			root.RequiredActions = append(root.RequiredActions, GitPreparationActionCreateRemoteRepository)
 		}
@@ -414,26 +413,32 @@ func inspectImportRepo(ctx context.Context, path string) RepoGitStatus {
 	if !status.HasCommit {
 		status.RequiredActions = append(status.RequiredActions, GitPreparationActionCommit)
 	}
-	if !status.HasOrigin {
-		status.RequiredActions = append(status.RequiredActions, GitPreparationActionSetRemote)
-	}
+	// A remote is optional: projects can live in a purely local repository.
+	// set_remote / create_remote_repository only run when the caller opts in.
 	return status
 }
 
-func addProjectRemoteRepositoryAction(actions []string) []string {
-	if len(actions) == 0 {
-		return actions
+// withOptInRemoteAction adds a remote action to a repository's required actions
+// only when the caller explicitly approved it and supplied the remote details.
+// A remote is never required: repositories without an origin stay local-only.
+func withOptInRemoteAction(status RepoGitStatus, in GitRepositoryPreparationInput) RepoGitStatus {
+	if status.HasOrigin && !slices.Contains(status.RequiredActions, GitPreparationActionCreateRemoteRepository) {
+		return status
 	}
-	next := make([]string, 0, len(actions))
-	for _, action := range actions {
-		if action == GitPreparationActionSetRemote {
-			action = GitPreparationActionCreateRemoteRepository
-		}
-		if !slices.Contains(next, action) {
-			next = append(next, action)
-		}
+	var action string
+	switch {
+	case in.GitHubRepository != nil && containsAction(in.ApprovedActions, GitPreparationActionCreateRemoteRepository):
+		action = GitPreparationActionCreateRemoteRepository
+	case strings.TrimSpace(in.RemoteURL) != "" && containsAction(in.ApprovedActions, GitPreparationActionSetRemote):
+		action = GitPreparationActionSetRemote
+	case strings.TrimSpace(in.RemoteURL) != "" && containsAction(in.ApprovedActions, GitPreparationActionCreateRemoteRepository):
+		action = GitPreparationActionCreateRemoteRepository
 	}
-	return next
+	if action == "" || slices.Contains(status.RequiredActions, action) {
+		return status
+	}
+	status.RequiredActions = append(slices.Clone(status.RequiredActions), action)
+	return status
 }
 
 type gitPreparationTarget struct {
@@ -443,16 +448,14 @@ type gitPreparationTarget struct {
 
 func preparationTargets(ctx context.Context, validation ImportValidationResult, in GitPreparationInput) ([]gitPreparationTarget, error) {
 	if validation.ImportKind == ImportKindProject {
-		return []gitPreparationTarget{{
-			Status: validation.Root,
-			Input: GitRepositoryPreparationInput{
-				RepoPath:         validation.Root.RepoPath,
-				ApprovedActions:  in.ApprovedActions,
-				RemoteURL:        in.RemoteURL,
-				GitHubRepository: in.GitHubRepository,
-				InitialCommitMsg: in.InitialCommitMsg,
-			},
-		}}, nil
+		input := GitRepositoryPreparationInput{
+			RepoPath:         validation.Root.RepoPath,
+			ApprovedActions:  in.ApprovedActions,
+			RemoteURL:        in.RemoteURL,
+			GitHubRepository: in.GitHubRepository,
+			InitialCommitMsg: in.InitialCommitMsg,
+		}
+		return []gitPreparationTarget{{Status: withOptInRemoteAction(validation.Root, input), Input: input}}, nil
 	}
 
 	byPath := map[string]GitRepositoryPreparationInput{}
@@ -466,10 +469,13 @@ func preparationTargets(ctx context.Context, validation ImportValidationResult, 
 	}
 	var targets []gitPreparationTarget
 	for _, status := range validation.ChildRepos {
+		input, ok := byPath[status.RepoPath]
+		if ok {
+			status = withOptInRemoteAction(status, input)
+		}
 		if len(status.RequiredActions) == 0 {
 			continue
 		}
-		input, ok := byPath[status.RepoPath]
 		if !ok {
 			return nil, apierr.Invalid("IMPORT_REPOSITORY_APPROVAL_REQUIRED", "Every repository with missing Git preparation requires explicit approval.", map[string]any{"repoPath": status.RepoPath})
 		}
@@ -491,7 +497,7 @@ func preparationTargets(ctx context.Context, validation ImportValidationResult, 
 		if len(status.BlockingErrors) > 0 {
 			return nil, apierr.Invalid("INVALID_REPOSITORY_PATH", "Repository cannot be prepared.", map[string]any{"repoPath": repoPath})
 		}
-		targets = append(targets, gitPreparationTarget{Status: status, Input: input})
+		targets = append(targets, gitPreparationTarget{Status: withOptInRemoteAction(status, input), Input: input})
 	}
 	return targets, nil
 }
